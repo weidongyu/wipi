@@ -144,3 +144,27 @@ exports.upload = functions.https.onRequest((req, res) => {
 
 
 
+exports.status = functions.https.onRequest((req, res) => {
+    if (req.method === 'POST') {
+        if(req.params.piCode){
+            // find the user id associate with pi
+            let isPaired = true;
+            if(isPaired){
+                let leave = true;
+                res.status(200);
+                if(leave){
+                    res.write('on');
+                }
+                else{
+                    res.write('off');
+                }
+            }else{
+                // the pi code has not paired with any device yet
+                res.status(401);
+            }
+        }else{
+            res.status(401);
+        }
+        res.end();
+    }
+});
