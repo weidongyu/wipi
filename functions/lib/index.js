@@ -112,29 +112,37 @@ exports.upload = functions.https.onRequest((req, res) => {
     }
 });
 exports.status = functions.https.onRequest((req, res) => {
-    if (req.method === 'POST') {
-        if (req.params.piCode) {
+    if (req.method === 'GET') {
+        // console.log(req.query);
+        if (req.query.piCode) {
             // find the user id associate with pi
+            let piCode = req.query.piCode;
+            console.log('pi code: ', piCode);
             let isPaired = true;
             if (isPaired) {
                 let leave = true;
                 res.status(200);
                 if (leave) {
-                    res.write('on');
+                    res.write(JSON.stringify({ status: 'on' }));
                 }
                 else {
-                    res.write('off');
+                    res.write(JSON.stringify({ status: 'off' }));
                 }
             }
             else {
                 // the pi code has not paired with any device yet
+                res.write('the pi has not been paired yet.');
                 res.status(401);
             }
         }
         else {
+            res.write('Missing pi code.');
             res.status(401);
         }
         res.end();
+    }
+    else {
+        res.status(405).end();
     }
 });
 //# sourceMappingURL=index.js.map
