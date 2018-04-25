@@ -147,30 +147,55 @@ exports.upload = functions.https.onRequest((req, res) => {
 exports.status = functions.https.onRequest((req, res) => {
     if (req.method === 'GET') {
         // console.log(req.query);
+
+
+
         if(req.query.piCode){
             // find the user id associate with pi
+
             let piCode = req.query.piCode;
             console.log('pi code: ', piCode);
-            let isPaired = true;
-            if(isPaired){
+
+            var db = admin.database();
+            var ref = db.ref("/users");
+            ref.once("value", function(snapshot) {
+                console.log(snapshot.val());
+                const users = snapshot.val();
+                console.log('users: ', users);
+                console.log('typeof: ', typeof(users));
+
+                let isPaired = false;
                 let leave = true;
-                res.status(200);
-                if(leave){
-                    res.write(JSON.stringify({status:'on'}));
+                for(let ind in users){
+                    console.log('picode: ', users[ind]['piCode']);
+                    if(users[ind]['piCode'] === piCode){
+                        isPaired = true;
+                        if(users[ind]['leave'] === false){
+                            leave = false;
+                            break;
+                        }
+                    }
                 }
-                else{
-                    res.write(JSON.stringify({status:'off'}));
+
+                if(isPaired){
+                    if(leave){
+                        res.write(JSON.stringify({status: true}));
+                    }
+                    else{
+                        res.write(JSON.stringify({status: false}));
+                    }
+                    res.status(200).end();
+                }else{
+                    // the pi code has not paired with any device yet
+                    // res.write('the pi has not been paired yet.');
+                    res.status(401).end();
                 }
-            }else{
-                // the pi code has not paired with any device yet
-                res.write('the pi has not been paired yet.');
-                res.status(401);
-            }
+            });
+
         }else{
-            res.write('Missing pi code.');
-            res.status(401);
+            // res.write('Missing pi code.');
+            res.status(401).end();
         }
-        res.end();
     }
     else{
         res.status(405).end();
