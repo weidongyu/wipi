@@ -221,7 +221,6 @@ exports.upload = functions.https.onRequest((req, res) => {
                     console.log('public download url: ', url[0]);
 
                     checkAndSend(uid_global, url[0]);
-                    sendNotification(uid_global, url[0]);
                 }).catch(error => {
                     console.error(error);
                 });
