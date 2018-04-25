@@ -8,10 +8,12 @@ const fs = require('fs');
 const Busboy = require('busboy');
 const inspect = require('util').inspect;
 // const bodyParser = require('body-parser')
+const request = require("request");
 admin.initializeApp();
 const bucket = admin.storage().bucket();
 let filename_global = 'tmp.jpg';
 let uid_global = 'MWN7SmhCUEZFmxmGULrnQriT1ub2';
+const subscription_key = "eb791e1eb42e40deb503bfde4da23abd";
 const sendNotification = (uid, url) => {
     // // This registration token comes from the client FCM SDKs.
     // var registrationToken = 'YOUR_REGISTRATION_TOKEN';
@@ -38,6 +40,83 @@ const sendNotification = (uid, url) => {
         console.log('Error sending message:', error);
     });
 };
+function getFaceId(image_url) {
+    let params = {
+        'returnFaceId': 'true',
+        'returnFaceLandmarks': 'false',
+        'returnFaceAttributes': '',
+    };
+    let face_api_url = 'https://westcentralus.api.cognitive.microsoft.com/face/v1.0/detect';
+    var options = {
+        url: face_api_url,
+        headers: { 'Ocp-Apim-Subscription-Key': subscription_key },
+        qs: params,
+        json: { url: image_url }
+    };
+    return new Promise(function (resolve, reject) {
+        // Do async job
+        request.post(options, function (err, response, body) {
+            if (err) {
+                reject(err);
+            }
+            else {
+                console.log("Get response: " + response.statusCode);
+                console.log('faceId body:', body);
+                resolve(body[0]['faceId']);
+            }
+        });
+    });
+}
+function checkFaceId(faceId) {
+    let face_api_url_id = 'https://westcentralus.api.cognitive.microsoft.com/face/v1.0/identify';
+    let fields = {
+        "personGroupId": "shadows",
+        "faceIds": [
+            faceId
+        ],
+        "maxNumOfCandidatesReturned": 1,
+        "confidenceThreshold": 0.5
+    };
+    var options = {
+        url: face_api_url_id,
+        headers: { 'Ocp-Apim-Subscription-Key': subscription_key },
+        json: fields
+    };
+    return new Promise(function (resolve, reject) {
+        // Do async job
+        request.post(options, function (err, response, body) {
+            if (err) {
+                reject(err);
+            }
+            else {
+                console.log("Get response in checking: " + response.statusCode);
+                console.log('response body:', body);
+                let candidates = JSON.stringify(body[0]['candidates']);
+                console.log('candidates: ', candidates);
+                resolve(body[0]['candidates']);
+            }
+        });
+    });
+}
+function checkAndSend(uid, url) {
+    getFaceId(url).then((faceId) => {
+        console.log("get FaceId:", faceId);
+        checkFaceId(faceId).then((candidates) => {
+            console.log('Got checked', candidates);
+            if (candidates[0]) {
+                console.log('Hit whitelist! No need to send notifications');
+            }
+            else {
+                sendNotification(uid, url);
+            }
+        }, (err) => {
+            console.log(err);
+        });
+    }, (err) => {
+        console.log('get FaceId err:', err);
+    });
+}
+;
 exports.upload = functions.https.onRequest((req, res) => {
     if (req.method === 'POST') {
         const busboy = new Busboy({ headers: req.headers });
@@ -95,6 +174,7 @@ exports.upload = functions.https.onRequest((req, res) => {
                     });
                 }).then(url => {
                     console.log('public download url: ', url[0]);
+                    checkAndSend(uid_global, url[0]);
                     sendNotification(uid_global, url[0]);
                 }).catch(error => {
                     console.error(error);
