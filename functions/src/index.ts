@@ -20,12 +20,12 @@ admin.initializeApp();
 
 const bucket = admin.storage().bucket();
 let filename_global = 'tmp.jpg';
-let uid_global = 'MWN7SmhCUEZFmxmGULrnQriT1ub2';
+let piCode_global = 'MWN7SmhCUEZFmxmGULrnQriT1ub2';
 
 const subscription_key = "eb791e1eb42e40deb503bfde4da23abd";
 
 
-const sendNotification = (uid, url) => {
+const sendNotification = (piCode, url) => {
     // // This registration token comes from the client FCM SDKs.
     // var registrationToken = 'YOUR_REGISTRATION_TOKEN';
 
@@ -41,7 +41,7 @@ const sendNotification = (uid, url) => {
             title: 'Danger!',
             body: 'Intruder detected!'
         },
-        topic: topic
+        topic: piCode
     };
 
     // Send a message to the device corresponding to the provided
@@ -127,7 +127,7 @@ function checkFaceId(faceId) {
     });
 }
 
-function checkAndSend (uid, url){
+function checkAndSend (piCode, url){
     getFaceId(url).then((faceIds) => {
         console.log("get FaceId:", faceIds);
         if(faceIds[0]){
@@ -136,14 +136,14 @@ function checkAndSend (uid, url){
                 if(candidates[0]){
                     console.log('Hit whitelist! No need to send notifications');
                 }else{
-                    sendNotification(uid,url);
+                    sendNotification(piCode,url);
                 }
             },(err)=>{
                 console.log(err);
             });
         }
         else{
-            sendNotification(uid, url);
+            sendNotification(piCode, url);
         }
 
     },(err)=>{
@@ -211,13 +211,13 @@ exports.upload = functions.https.onRequest((req, res) => {
                 // fs.unlinkSync(file);
 
                 const options = {
-                    destination: '/images/'+ uid_global +'/' + filename_global
+                    destination: '/images/'+ piCode_global +'/' + filename_global
                 };
 
                 bucket.upload(file, options).then(data => {
                     fs.unlinkSync(file);
 
-                    const file_uploaded = bucket.file('images/'+ uid_global +'/' + filename_global);
+                    const file_uploaded = bucket.file('images/'+ piCode_global +'/' + filename_global);
                     return file_uploaded.getSignedUrl({
                         action: 'read',
                         expires: '03-09-2491'
@@ -226,7 +226,7 @@ exports.upload = functions.https.onRequest((req, res) => {
 
                     console.log('public download url: ', url[0]);
 
-                    checkAndSend(uid_global, url[0]);
+                    checkAndSend(piCode_global, url[0]);
                 }).catch(error => {
                     console.error(error);
                 });
@@ -251,13 +251,11 @@ exports.status = functions.https.onRequest((req, res) => {
     if (req.method === 'GET') {
         // console.log(req.query);
 
-
-
         if(req.query.piCode){
             // find the user id associate with pi
 
             let piCode = req.query.piCode;
-            console.log('pi code: ', piCode);
+            console.log('pi code in params: ', piCode);
 
             var db = admin.database();
             var ref = db.ref("/users");
@@ -270,7 +268,7 @@ exports.status = functions.https.onRequest((req, res) => {
                 let isPaired = false;
                 let leave = true;
                 for(let ind in users){
-                    console.log('picode: ', users[ind]['piCode']);
+                    console.log('picode in data: ', users[ind]['piCode']);
                     if(users[ind]['piCode'] === piCode){
                         isPaired = true;
                         if(users[ind]['leave'] === false){
