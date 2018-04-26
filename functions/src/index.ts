@@ -82,7 +82,7 @@ function getFaceId(image_url) {
             } else {
                 console.log("Get response: " + response.statusCode);
                 console.log('faceId body:', body);
-                resolve(body[0]['faceId']);
+                resolve(body);
             }
         })
     });
@@ -101,7 +101,7 @@ function checkFaceId(faceId) {
         ],
         "maxNumOfCandidatesReturned": 1,
         "confidenceThreshold": 0.5
-    }
+    };
 
     var options = {
         url: face_api_url_id,
@@ -128,18 +128,24 @@ function checkFaceId(faceId) {
 }
 
 function checkAndSend (uid, url){
-    getFaceId(url).then((faceId) => {
-        console.log("get FaceId:", faceId);
-        checkFaceId(faceId).then((candidates)=>{
-            console.log('Got checked',candidates);
-            if(candidates[0]){
-                console.log('Hit whitelist! No need to send notifications');
-            }else{
-                sendNotification(uid,url);
-            }
-        },(err)=>{
-            console.log(err);
-        });
+    getFaceId(url).then((faceIds) => {
+        console.log("get FaceId:", faceIds);
+        if(faceIds[0]){
+            checkFaceId(faceIds[0]['faceId']).then((candidates)=>{
+                console.log('Got checked',candidates);
+                if(candidates[0]){
+                    console.log('Hit whitelist! No need to send notifications');
+                }else{
+                    sendNotification(uid,url);
+                }
+            },(err)=>{
+                console.log(err);
+            });
+        }
+        else{
+            sendNotification(uid, url);
+        }
+
     },(err)=>{
         console.log('get FaceId err:', err);
     });
